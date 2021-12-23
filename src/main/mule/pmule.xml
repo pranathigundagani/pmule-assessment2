@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:java="http://www.mulesoft.org/schema/mule/java"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="a8d5079b-ad8a-4cf6-9a68-1ae0fe3c0d18" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="pmuleFlow" doc:id="57ec034f-bccd-4edb-9bbb-09425d62e2a0" >
+		<http:listener doc:name="Listener" doc:id="8fa06bf9-7765-4cc3-a911-8ee25f31fe1e" config-ref="HTTP_Listener_config" path="/checkproductid"/>
+		<set-variable value="#[uuid()]" doc:name="Set Variable" doc:id="125ac64c-aede-4b47-996b-8c1b915715d4" variableName="correlationId"/>
+		<java:invoke-static doc:name="Invoke static" doc:id="03a7e5a1-f124-4e25-a98d-c7672a4ea0c4" class="com.proj.Sales" method="checkProductId(int)">
+			<java:args><![CDATA[#[{
+  arg0: attributes.queryParams.productId 
+}]]]></java:args>
+		</java:invoke-static>
+		<choice doc:name="Choice" doc:id="581dfcce-2e8c-4b4b-b561-f46412ffb034">
+			<when expression="#[payload ==true]">
+				<set-payload value="Valid ID" doc:name="Set Payload" doc:id="c5874cd5-3f61-4dc3-830d-6f9a62c208e6" />
+				<logger level="INFO" doc:name="Logger" doc:id="e2492366-60bc-42bd-b069-14fc2fa9f466" message="correlationId - #[vars.correlationId]" />
+			</when>
+			<otherwise>
+				<set-payload value="Invalid ID" doc:name="Set Payload" doc:id="501625f0-7425-4d97-b8bd-1e9b3408ab22" />
+				<logger level="INFO" doc:name="Logger" doc:id="e9c2edcd-0499-4386-b76d-45215bcab085" message="#[payload]"/>
+			</otherwise>
+		</choice>
+	</flow>
+	<flow name="pmuleFlow1" doc:id="49128c1d-104e-48f1-bc47-74238873ce30" >
+		<http:listener doc:name="Listener" doc:id="ce7c3a6d-6110-4925-aec9-12c060280fe4" config-ref="HTTP_Listener_config" path="/getamount"/>
+		<set-variable value="#[uuid()]" doc:name="Set Variable" doc:id="17d83ce6-5514-4962-8817-ed611b5ae0ba" variableName="correlationID"/>
+		<java:new doc:name="New" doc:id="c68614fc-9ce1-43f6-a668-573d33c5d848" class="com.proj.Sales" constructor="Sales()" target="object"/>
+		<java:invoke doc:name="Invoke" doc:id="2423c157-f405-4ca0-abae-37ad96ae91b2" class="com.proj.Sales" method="getAmount(java.lang.String)" instance="#[vars.object]">
+			<java:args ><![CDATA[#[{
+	arg0 : payload.size
+}]]]></java:args>
+		</java:invoke>
+		<ee:transform doc:name="Transform Message" doc:id="8df98244-9752-431e-b873-c2572694a664" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	Result : payload
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<choice doc:name="Choice" doc:id="e6194373-ab95-4679-8016-a5c5cfb072b4">
+			<when expression='#[payload.size == "S"]'>
+				<ee:transform doc:name="Transform Message" doc:id="8413013e-3870-490d-a6ea-f08547765a60" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Total amount" :  payload
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="4d1e3977-8706-45fa-b0f1-013bfa3015bb" message="correlationID - #[vars.correlationID]"/>
+			</when>
+			<when expression='#[payload.size ==  "M"]'>
+				<ee:transform doc:name="Transform Message" doc:id="3f0422ea-f8e1-48c2-b38e-d20882e8bc0b" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Total amount" :  payload
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="11bdce3a-e8c8-45bf-b5b2-67326124acf7" message="correlationID - #[vars.correlationID]"/>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="14d7d067-91eb-49ce-96f9-b843b262cf03" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Total amount" :  payload
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="db6c9608-dfc7-449a-ad49-c9a8b581775a" message="correlationID - #[vars.correlationID]"/>
+			</otherwise>
+		</choice>
+	</flow>
+</mule>
